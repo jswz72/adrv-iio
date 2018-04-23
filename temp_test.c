@@ -66,6 +66,38 @@ static void handle_sig(int sig)
 	stop = true;
 }
 
+void getAttributeInfo(struct iio_channel *chn)
+{
+    unsigned int attrCount = iio_channel_get_attrs_count(chn);
+    char *value = (char*)malloc(sizeof(char)*20);
+    int i;
+    for (i = 0; i < attrCount; i++)
+    {
+        const char *attrname = iio_channel_get_attr(chn, i);
+        printf("ATTR name: %s\n", attrname);
+        printf("Sample Read Data: $s\n", iio_channel_attr_read(chn, attrname, value, sizeof(char)*20));
+    }
+}
+
+void getDeviceInfo(struct iio_device *device) {
+    unsigned int channel_count = iio_device_get_channels_count(rx);
+    printf("\n%u Channels Found\n", channel_count);
+    for (i = 0; i < channel_count; i++)
+    {
+        rx0_i = iio_device_get_channel(rx, i);
+        if (rx0_i == NULL)
+        {
+            printf("COULDN'T FIND CHANNEL %d\n", i);
+            continue;
+        }
+        printf("%d: CHANNEL NAME: %s\n", i, iio_channel_get_name(rx0_i));
+        printf("Channel id: %s\n",  iio_channel_get_id(rx0_i));
+        printf("Is Output: %d\n", iio_channel_is_output(rx0_i));
+        printf("Is Scan (able to be buffer'd) %d\n", iio_channel_is_scan_element(rx0_i));
+        getAttributeInfo(rx0_i);
+    }
+}
+
 char* device0 = "ad7291\0";
 int main(int argc, char **argv)
 {
@@ -82,7 +114,20 @@ int main(int argc, char **argv)
 
     // acquire iio context
     ctx = iio_create_local_context();
-    printf("DEVICE COUNT: %u\n", iio_context_get_devices_count(ctx));
+    unsigned int deviceCount = iio_context_get_devices_count(ctx);
+    printf("DEVICE COUNT: %u\n", deviceCount);
+    unsigned int i;
+    for (i = 0; i < deviceCount; i++)
+    {
+        rx = iio_context_get_device(ctx, i);
+        if (rx == NULL)
+        {
+            printf("COULDN'T FIND DEVICE\n");
+            continue;
+        }
+        printf("DEVICE %d: %s\n", i, iio_device_get_name(rx));
+        getDeviceInfo(rx);
+    }
 
     rx = iio_context_find_device(ctx, device0);
     if (rx == NULL)
@@ -91,11 +136,10 @@ int main(int argc, char **argv)
         shutdown();
         return 0;
     }
-    printf("CHOSE: %s\n", iio_device_get_name(rx));
-    unsigned int channel_count = iio_device_get_channels_count(rx);
-    printf("\n%u Channels Found\n", channel_count);
+    //printf("CHOSE: %s\n", iio_device_get_name(rx));
+    // unsigned int channel_count = iio_device_get_channels_count(rx);
+    // printf("\n%u Channels Found\n", channel_count);
 
-    int i;
     for (i = 0; i < channel_count; i++)
     {
         rx0_i = iio_device_get_channel(rx, i);
@@ -105,7 +149,7 @@ int main(int argc, char **argv)
         {
             printf("%d: CHANNEL NAME: %s\n", i, iio_channel_get_name(rx0_i));
             printf("Channel id: %s\n",  iio_channel_get_id(rx0_i));
-            printf("Is Input: %d\n", iio_channel_is_output(rx0_i));
+            printf("Is Output: %d\n", iio_channel_is_output(rx0_i));
             printf("Is Scan: %d\n", iio_channel_is_scan_element(rx0_i));
         }
     }
